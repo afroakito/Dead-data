@@ -1,0 +1,20 @@
+# Environment variables -- never commit credentials
+.env
+
+# Database files -- large, rebuilable from scripts
+*.db
+
+# Downloaded raw data -- large, rebuilable from setup.sh
+*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
