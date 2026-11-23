@@ -1,0 +1,104 @@
+<title>Symbol Finder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f6f4ef;--card:#ffffff;--fg:#1d1d1b;--mute:#6b6a64;--line:#dedbd1;--accent:#1f5f4a;--chip:#e9e5d9;--ex:#fff4d6;--exfg:#5a4300}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161715;--card:#202220;--fg:#ecebe4;--mute:#9b9a92;--line:#34362f;--accent:#7fd1ae;--chip:#2b2d27;--ex:#3a3118;--exfg:#f1d98a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161715;--card:#202220;--fg:#ecebe4;--mute:#9b9a92;--line:#34362f;--accent:#7fd1ae;--chip:#2b2d27;--ex:#3a3118;--exfg:#f1d98a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.45 Inter,system-ui,sans-serif;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:640px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 14px;font-size:14px}
+input{width:100%;box-sizing:border-box;font:inherit;font-size:18px;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg)}
+input:focus{outline:none;border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.chips button{font:inherit;font-size:13px;padding:6px 10px;border:0;border-radius:99px;background:var(--chip);color:var(--fg);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.count{font-size:13px;color:var(--mute);margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;align-items:start}
+.sym{font:600 22px/1.2 "Cambria Math","STIX Two Math",Georgia,serif;color:var(--accent);word-break:break-word}
+.name{font-weight:600}
+.say{color:var(--mute);font-size:13px;margin:2px 0 6px}
+.mean{margin:0}
+.ex{margin:8px 0 0;padding:6px 9px;border-radius:8px;background:var(--ex);color:var(--exfg);font-size:14px}
+.pg{font-size:12px;color:var(--mute);margin-top:6px}
+.none{color:var(--mute);padding:20px 0}
+</style>
+<main>
+<h1>Symbol Finder</h1>
+<p class="sub">Type a symbol or a plain word. Page numbers are Scheinerman's book.</p>
+<input id="q" type="search" placeholder="e.g. average, σ, Corr, null" autocomplete="off" autofocus>
+<div class="chips" id="chips"></div>
+<p class="count" id="count"></p>
+<div id="out"></div>
+</main>
+<script>
+var D=[
+["Chance","P(A)","P of A","Chance that A happens. 0 to 1.","probability chance likelihood Pr",57,"P(0 deaths) = e^(−expected). Below 0.05 → suspect_zero."],
+["Chance","P(A ∩ B)","P of A and B","Chance both happen.","and intersection P(AB)",57,""],
+["Chance","P(A ∪ B)","P of A or B","Chance at least one happens.","or union",57,""],
+["Chance","P(A | B)","P of A given B","Chance of A once you know B happened.","conditional given bayes",57,""],
+["Chance","X","random variable","A number that comes from chance. Capital letter.","rv random variable",57,"X = a country's suicide rate in a random year."],
+["Chance","1_A","indicator","1 if A happened, 0 if not.","indicator I_A",57,""],
+["Chance","iid","independent, same rule","Each draw is separate and follows the same rule.","independent identically distributed",59,""],
+["Chance","a.s.","almost surely","Happens with chance 1.","almost sure",61,""],
+["Average","E(X)","expected value","The average you would get over many tries.","average mean expectation expected value E",57,""],
+["Average","μ","mean","The average. Same as E(X).","mu average mean",57,"Mean rate of one country across years."],
+["Average","E(X | Y)","expected X given Y","Average of X when Y is known.","conditional expectation",58,""],
+["Spread","Var(X)","variance","How far values wander from the mean, squared.","variance spread",58,""],
+["Spread","σ","standard deviation","Typical distance from the mean. Square root of variance.","sigma std stdev standard deviation spread",58,""],
+["Spread","σ²","variance","Standard deviation squared.","sigma squared variance",58,""],
+["Link","Cov(X,Y)","covariance","Do X and Y move together? Sign matters, size is hard to read.","covariance together",58,""],
+["Link","Corr(X,Y)","correlation","Covariance scaled to −1…+1. Cov ÷ (σX σY).","correlation r pearson rho",58,"Q1: r = 0.004 (n = 2806). Q2: median r = −0.49 inside countries."],
+["Link","Σ (bold)","covariance matrix","Table of all covariances between variables.","covariance matrix sigma",58,""],
+["Link","H(X)","entropy","How unpredictable X is.","entropy surprise",58,""],
+["Shape","PDF","density function","Curve showing how likely each value is.","pdf density",59,""],
+["Shape","PMF","mass function","Same as PDF, for countable values.","pmf mass",59,""],
+["Shape","CDF","cumulative distribution","Chance X is at or below a value.","cdf cumulative",59,""],
+["Shape","N(0,1)","standard normal","Bell curve, mean 0, spread 1.","normal gaussian bell",60,""],
+["Shape","χ²","chi-squared","A distribution used in tests.","chi squared chi",60,""],
+["Shape","t(ν)","Student's t","Bell-like curve for small samples.","student t",60,""],
+["Shape","λ","lambda (Poisson rate)","Average count in a Poisson distribution.","lambda poisson",59,"Counts of deaths per year fit Poisson."],
+["Shape","Φ","phi (normal CDF)","Chance under the bell curve up to a point.","phi normal cdf",60,""],
+["Shape","z-score","z-score","How many σ a value is from the mean.","z score standardize",61,""],
+["Test","H₀","null hypothesis","Default claim: no effect, no link.","h0 null hypothesis h naught",62,"Q1 stayed at H₀: no pooled link."],
+["Test","H_A","alternative hypothesis","The claim that there is an effect.","alternative hypothesis ha",62,""],
+["Test","α","alpha (type I error)","Chance of a false alarm.","alpha type one false positive",62,"Why batch-testing many pairs is risky."],
+["Test","β","beta (type II error)","Chance of missing a real effect.","beta type two false negative",62,""],
+["Test","≈","approximately equal","Close enough.","approx about",63,""],
+["Test","∝","proportional to","Grows in step with.","proportional",63,""],
+["Test","≪ ≫","much less / much greater","Far smaller / far bigger.","much less greater",66,""],
+["Basics","Σ","sum","Add them all up.","sigma summation sum add total",8,""],
+["Basics","Π","product","Multiply them all.","pi product multiply",8,""],
+["Basics","∈","is in","Belongs to the set.","element member in",5,"code ∈ sovereign countries."],
+["Basics","∅","empty set","Nothing in it.","empty null set",5,""],
+["Basics","∪  ∩","union, intersection","Combine sets / keep what both share.","union intersection",6,""],
+["Basics","|A|","size of A","How many items in A.","cardinality count size",7,"|countries with data| = 107"],
+["Basics","|x|","absolute value","Distance from zero. Drops the sign.","absolute value abs",14,""],
+["Basics","∀","for all","True for every one.","for all universal",12,""],
+["Basics","∃","there exists","At least one exists.","exists there is existential",12,""],
+["Basics","⇒","implies","If left, then right.","implies if then",11,""],
+["Basics","⇔","if and only if","Both directions.","iff if and only if",11,""],
+["Basics","∴  ∵","therefore, because","Shorthand in proofs.","therefore because",11,""],
+["Basics","ln  log","logarithm","How many times to multiply to reach a number.","log ln logarithm",27,""],
+["Basics","O( )","big-oh","Rough growth speed of an algorithm.","big o order growth",64,""]
+];
+var groups=["All"].concat(D.map(function(d){return d[0]}).filter(function(v,i,a){return a.indexOf(v)===i}));
+var cur="All",q=document.getElementById("q"),out=document.getElementById("out"),cnt=document.getElementById("count"),ch=document.getElementById("chips");
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function norm(s){return String(s).toLowerCase().replace(/[\s_]/g,"")}
+function chips(){ch.innerHTML=groups.map(function(g){return '<button aria-pressed="'+(g===cur)+'" data-g="'+g+'">'+g+'</button>'}).join("")}
+ch.addEventListener("click",function(e){var g=e.target.getAttribute&&e.target.getAttribute("data-g");if(g){cur=g;chips();draw()}});
+function draw(){
+  var t=norm(q.value);
+  var r=D.filter(function(d){
+    if(cur!=="All"&&d[0]!==cur)return false;
+    if(!t)return true;
+    return norm(d[1]+d[2]+d[3]+d[4]).indexOf(t)>-1;
+  });
+  cnt.textContent=r.length+" found";
+  out.innerHTML=r.length?r.map(function(d){
+    return '<div class="card"><div class="sym">'+esc(d[1])+'</div><div><div class="name">'+esc(d[2])+'</div><div class="say">'+esc(d[0])+'</div><p class="mean">'+esc(d[3])+'</p>'+(d[6]?'<p class="ex">Dead Data: '+esc(d[6])+'</p>':'')+'<div class="pg">Scheinerman p.'+d[5]+'</div></div></div>';
+  }).join(""):'<p class="none">Nothing. Try another word.</p>';
+}
+q.addEventListener("input",draw);chips();draw();
+</script>
